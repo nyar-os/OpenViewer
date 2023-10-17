@@ -1,0 +1,19 @@
+# Rust
+/target/
+**/*.rs.bk
+
+# Node
+node_modules/
+dist/
+*.tsbuildinfo
+.pnpm-store/
+
+# Native build output
+/packages/*/staging/
+/packages/*/*.node
+!/packages/*/index.js
+
+# Local editor state
+.vscode/
+.idea/
+*.log
