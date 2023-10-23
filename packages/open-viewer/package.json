@@ -1,0 +1,51 @@
+{
+    "name": "@wae/open-viewer",
+    "version": "0.0.0",
+    "description": "OpenViewer CLI and Node API: in-process image metadata, decoding and thumbnails",
+    "type": "module",
+    "bin": {
+        "open-viewer": "dist/cli.js"
+    },
+    "main": "./dist/index.js",
+    "types": "./dist/index.d.ts",
+    "exports": {
+        ".": {
+            "types": "./dist/index.d.ts",
+            "import": "./dist/index.js"
+        }
+    },
+    "files": [
+        "dist",
+        "gui",
+        "locales",
+        "README.md"
+    ],
+    "scripts": {
+        "build": "tsc -p tsconfig.json",
+        "typecheck": "tsc -p tsconfig.json --noEmit"
+    },
+    "keywords": [
+        "open-viewer",
+        "image-viewer",
+        "agent-skills",
+        "wae"
+    ],
+    "engines": {
+        "node": ">=18"
+    },
+    "repository": {
+        "type": "git",
+        "url": "git+https://github.com/nyar-os/OpenViewer.git",
+        "directory": "packages/open-viewer"
+    },
+    "dependencies": {
+        "@wae/commander": "0.0.3"
+    },
+    "optionalDependencies": {
+        "@wae/open-viewer-win32-x64": "workspace:*"
+    },
+    "devDependencies": {
+        "@types/node": "^22.20.4",
+        "typescript": "^5.9.2"
+    }
+}

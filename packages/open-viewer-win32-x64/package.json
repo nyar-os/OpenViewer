@@ -1,0 +1,20 @@
+{
+    "name": "@wae/open-viewer-win32-x64",
+    "version": "0.0.0",
+    "description": "Windows x64 native addon for @wae/open-viewer",
+    "os": ["win32"],
+    "cpu": ["x64"],
+    "main": "open-viewer.win32-x64.node",
+    "files": [
+        "open-viewer.win32-x64.node",
+        "README.md"
+    ],
+    "engines": {
+        "node": ">=18"
+    },
+    "repository": {
+        "type": "git",
+        "url": "git+https://github.com/nyar-os/OpenViewer.git",
+        "directory": "packages/open-viewer-win32-x64"
+    }
+}
