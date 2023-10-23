@@ -30,7 +30,7 @@ import {
 const here = path.dirname(fileURLToPath(import.meta.url));
 
 /** Default staged WebView content folder shipped with this package. */
-export const defaultGuiDir = path.resolve(here, '..', 'gui');
+export const defaultGuiDir = path.resolve(here, 'gui');
 
 /** Native binding version. */
 export function version(): string {
