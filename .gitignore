@@ -13,6 +13,9 @@ dist/
 /packages/*/*.node
 !/packages/*/index.js
 
+# VMZ build cache
+packages/open-viewer-ui/.cache/
+
 # Local editor state
 .vscode/
 .idea/
