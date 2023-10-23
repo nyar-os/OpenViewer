@@ -1,0 +1,26 @@
+{
+    "name": "@wae/open-viewer-ui",
+    "version": "0.0.0",
+    "private": true,
+    "type": "module",
+    "description": "OpenViewer WebView2 interface built with @vmz/ui",
+    "scripts": {
+        "check": "vmz check .",
+        "build": "vmz build . --profile static",
+        "serve": "vmz serve . --profile static",
+        "stage": "node --experimental-strip-types ./scripts/stage-gui.ts"
+    },
+    "dependencies": {
+        "@vmz/core": "0.3.13",
+        "@vmz/ui": "0.3.13",
+        "@vmz/ui-icons": "0.3.13"
+    },
+    "devDependencies": {
+        "@vmz/vmz": "0.3.13"
+    },
+    "repository": {
+        "type": "git",
+        "url": "git+https://github.com/nyar-os/OpenViewer.git",
+        "directory": "packages/open-viewer-ui"
+    }
+}
