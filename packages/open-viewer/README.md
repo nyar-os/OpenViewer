@@ -22,8 +22,8 @@ claimed as supported.
 | `open-viewer thumbnail <path> --out <path>` | Render a PNG thumbnail (`--dry-run` previews, `--max` sets the edge limit) |
 | `open-viewer capabilities` | List capability states for this build |
 | `open-viewer audit` | Query the append-only audit log |
-| `open-viewer install` | Plan an install or upgrade (`--apply` applies) |
-| `open-viewer uninstall` | Plan a removal (`--apply` applies) |
+| `open-viewer install` | Plan an install or upgrade (`--apply` currently reports `not_implemented`) |
+| `open-viewer uninstall` | Plan a removal (`--apply` currently reports `not_implemented`) |
 | `open-viewer gui` | Open the desktop viewer window |
 | `open-viewer version` | Print the package version |
 
