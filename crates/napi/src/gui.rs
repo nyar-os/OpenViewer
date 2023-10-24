@@ -118,7 +118,12 @@ fn handle(message: &str) -> IpcOutcome {
                 Err(error) => reply_error(request_id, error.code(), &error.to_string()),
             }
         }
-        "close" => IpcOutcome::CloseWindow,
+        "close" => {
+            let _ = audit::run(Operation::GuiClose.capability(), mode(Operation::GuiClose), json!({}), || {
+                Ok(((), Summary::new(0, "window close requested")))
+            });
+            IpcOutcome::CloseWindow
+        }
         _ => IpcOutcome::Ignored,
     }
 }
