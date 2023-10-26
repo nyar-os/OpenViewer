@@ -19,11 +19,16 @@ jobs:
           cache: pnpm
       - name: Install
         run: pnpm install --frozen-lockfile
+      - uses: actions-rust-lang/setup-rust-toolchain@v1
       - name: Type check
         run: pnpm --filter @wae/open-viewer run typecheck
       - name: Build TS
         run: pnpm run build:ts
       - name: Build UI
         run: pnpm run build:ui
+      # `check:skills` runs `open-viewer --help`, which loads the N-API binding at
+      # import time. Stage the Windows addon before probing the CLI command tree.
+      - name: Build and stage native addon
+        run: pnpm run build:napi
       - name: Check agent skills
         run: pnpm run check:skills

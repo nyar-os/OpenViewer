@@ -13,6 +13,13 @@ dist/
 /packages/*/*.node
 !/packages/*/index.js
 
+# Local npm 2FA (never commit)
+.env.placeholder.local
+.env*.local
+
+# Nifty local cache
+.cache/
+
 # VMZ build cache
 packages/open-viewer-ui/.cache/
 
