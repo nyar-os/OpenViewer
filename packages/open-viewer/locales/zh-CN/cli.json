@@ -1,0 +1,34 @@
+{
+    "cli": {
+        "intro": "OpenViewer — 查看本地图片、读取元信息并渲染 PNG 预览或缩略图。",
+        "cmd": {
+            "info": "打印单张图片的格式、尺寸、颜色类型与文件大小",
+            "thumbnail": "渲染不超过 --max 的 PNG 缩略图，不放大原图",
+            "capabilities": "打印当前平台能力，包含不可用状态",
+            "audit": "以 JSON 行打印追加式能力审计历史",
+            "install": "规划安装或升级，可选执行",
+            "uninstall": "规划卸载，可选执行",
+            "gui": "打开桌面查看窗口",
+            "version": "打印包版本"
+        },
+        "opt": {
+            "json": "输出机器可读 JSON",
+            "out": "`thumbnail` 写出的 PNG 路径",
+            "max": "缩略图最长边像素上限（1-8192，默认 1024）",
+            "dryRun": "渲染并测量缩略图，但不写文件",
+            "apply": "执行已打印的计划，而不只是规划",
+            "noShortcut": "不规划按用户启动器",
+            "resetConfig": "用默认值覆盖已有配置",
+            "keepConfig": "卸载时保留用户配置",
+            "title": "GUI 窗口标题",
+            "contentDir": "包含 index.html 的 GUI 内容目录",
+            "actor": "记录到每次能力调用的 actor id（默认读取 WAE_ACTOR_ID）",
+            "actorKind": "actor 类型：user 或 agent（默认读取 WAE_ACTOR_KIND）",
+            "actorSource": "actor 入口来源，例如 cli、gui、plugin（默认 cli）",
+            "filterActor": "只显示该 actor id 的审计记录",
+            "filterKind": "只显示该 actor 类型的审计记录",
+            "capability": "只显示该能力名的审计记录",
+            "auditLimit": "最多打印的审计记录条数"
+        }
+    }
+}

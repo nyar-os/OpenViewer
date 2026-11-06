@@ -1,0 +1,34 @@
+{
+    "cli": {
+        "intro": "OpenViewer — inspect local images, read metadata and render PNG previews or thumbnails.",
+        "cmd": {
+            "info": "Print format, dimensions, colour type and file size for one image",
+            "thumbnail": "Render a PNG thumbnail that fits inside --max without upscaling",
+            "capabilities": "Print platform capabilities, including unavailable states",
+            "audit": "Print the append-only capability audit history as JSON lines",
+            "install": "Plan an install or upgrade, and optionally apply it",
+            "uninstall": "Plan a removal, and optionally apply it",
+            "gui": "Open the desktop viewer window",
+            "version": "Print the package version"
+        },
+        "opt": {
+            "json": "Print machine-readable JSON",
+            "out": "PNG thumbnail path written by `thumbnail`",
+            "max": "Maximum thumbnail edge in pixels (1-8192, default 1024)",
+            "dryRun": "Render and measure the thumbnail without writing a file",
+            "apply": "Apply the printed plan instead of only planning",
+            "noShortcut": "Do not plan a per-user launcher",
+            "resetConfig": "Replace an existing configuration with defaults",
+            "keepConfig": "Keep the user configuration during uninstall",
+            "title": "GUI window title",
+            "contentDir": "GUI content folder containing index.html",
+            "actor": "Actor id recorded for every capability call (default: WAE_ACTOR_ID)",
+            "actorKind": "Actor kind: user or agent (default: WAE_ACTOR_KIND)",
+            "actorSource": "Actor entry point, for example cli, gui, plugin (default: cli)",
+            "filterActor": "Only show audit records for this actor id",
+            "filterKind": "Only show audit records for this actor kind",
+            "capability": "Only show audit records for this capability name",
+            "auditLimit": "Maximum audit records to print"
+        }
+    }
+}

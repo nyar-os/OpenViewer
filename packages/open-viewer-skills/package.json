@@ -1,0 +1,22 @@
+{
+    "name": "@wae/open-viewer-skills",
+    "version": "0.0.0",
+    "description": "Agent skills for the OpenViewer CLI",
+    "files": [
+        "skills",
+        "README.md"
+    ],
+    "keywords": [
+        "agent-skills",
+        "open-viewer",
+        "image-viewer"
+    ],
+    "engines": {
+        "node": ">=18"
+    },
+    "repository": {
+        "type": "git",
+        "url": "git+https://github.com/nyar-os/OpenViewer.git",
+        "directory": "packages/open-viewer-skills"
+    }
+}
