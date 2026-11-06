@@ -1,6 +1,6 @@
 {
     "name": "@wae/open-viewer",
-    "version": "0.0.0",
+    "version": "0.0.1",
     "description": "OpenViewer CLI and Node API: in-process image metadata, decoding and thumbnails",
     "type": "module",
     "bin": {
