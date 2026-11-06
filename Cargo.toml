@@ -5,7 +5,7 @@ default-members = ["crates/core", "crates/napi"]
 exclude = ["projects"]
 
 [workspace.package]
-version = "0.0.0"
+version = "0.0.1"
 edition = "2024"
 rust-version = "1.90"
 authors = ["OpenViewer Authors"]
