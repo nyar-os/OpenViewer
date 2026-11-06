@@ -1,0 +1,56 @@
+{
+    "entries": [
+        {
+            "key": { "path": ["action", "primary", "background"] },
+            "value": "#6E56CF"
+        },
+        {
+            "key": { "path": ["action", "primary", "foreground"] },
+            "value": "#FFFFFF"
+        },
+        {
+            "key": { "path": ["action", "primary", "hover"] },
+            "value": "#8B5CF6"
+        },
+        {
+            "key": { "path": ["action", "primary", "active"] },
+            "value": "#5B21B6"
+        },
+        {
+            "key": { "path": ["action", "primary", "soft"] },
+            "value": "#EDE9FE"
+        },
+        {
+            "key": { "path": ["action", "secondary", "background"] },
+            "value": "#FFFFFF"
+        },
+        {
+            "key": { "path": ["action", "secondary", "foreground"] },
+            "value": "#1B1830"
+        },
+        {
+            "key": { "path": ["action", "secondary", "border"] },
+            "value": "#E4E0F0"
+        },
+        {
+            "key": { "path": ["action", "secondary", "hover"] },
+            "value": "#F8F7FC"
+        },
+        {
+            "key": { "path": ["action", "secondary", "active"] },
+            "value": "#F1EEF9"
+        },
+        {
+            "key": { "path": ["action", "link", "foreground"] },
+            "value": "#5B21B6"
+        },
+        {
+            "key": { "path": ["action", "link", "hover"] },
+            "value": "#6E56CF"
+        },
+        {
+            "key": { "path": ["focus", "ring"] },
+            "value": "color-mix(in srgb, #6E56CF 20%, transparent)"
+        }
+    ]
+}

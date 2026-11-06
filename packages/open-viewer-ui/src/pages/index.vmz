@@ -1,0 +1,376 @@
+<template>
+    <div data-open-viewer="root" class="ov-root" data-theme="dark">
+        <AppShell brand="OpenViewer" homeHref="/" navLabel="Navigation" activeId="viewer" :nav="navItems">
+            <div class="vmz-slot-content ov-body">
+                <header class="ov-head">
+                    <h1>
+                        {{ title }}
+                    </h1>
+                    <p>
+                        {{ lead }}
+                    </p>
+                </header>
+                <Card :title="openCardTitle" :description="openCardDesc">
+                    <Field
+                        :label="pathLabel"
+                        :description="pathDesc"
+                        controlId="ov-path"
+                        descriptionId="ov-path-desc"
+                        errorId="ov-path-err"
+                        describedBy="ov-path-desc"
+                        :value="imagePath"
+                        :placeholder="pathPlaceholder"
+                        @input="onPathInput"
+                    />
+                    <div class="ov-actions">
+                        <Button type="button" :loading="loading" :disabled="loading" @click="preview">
+                            {{ previewLabel }}
+                        </Button>
+                        <Button type="button" variant="secondary" @click="requestClose">
+                            {{ closeLabel }}
+                        </Button>
+                    </div>
+                    <Alert v-if="error" tone="danger" roleName="alert" :title="errorTitle" :description="error" />
+                    <Alert v-else-if="status" tone="info" roleName="status" :title="statusTitle" :description="status" />
+                </Card>
+                <Card :title="canvasCardTitle" :description="canvasCardDesc">
+                    <Empty v-if="!imageUrl && !loading" :title="emptyTitle" :description="emptyDesc" />
+                    <p v-else-if="loading && !imageUrl" class="ov-note">
+                        {{ loadingText }}
+                    </p>
+                    <div v-else class="ov-frame">
+                        <img :src="imageUrl" :alt="imageAlt" class="ov-image" />
+                    </div>
+                    <p v-if="renderLine" class="ov-note">
+                        {{ renderLine }}
+                    </p>
+                </Card>
+                <Card :title="metadataCardTitle" :description="metadataCardDesc">
+                    <div class="ov-stats">
+                        <div class="ov-stat">
+                            <div class="ov-stat__label">
+                                {{ formatLabel }}
+                            </div>
+                            <div class="ov-stat__value">
+                                {{ formatText }}
+                            </div>
+                        </div>
+                        <div class="ov-stat">
+                            <div class="ov-stat__label">
+                                {{ dimensionsLabel }}
+                            </div>
+                            <div class="ov-stat__value">
+                                {{ dimensionsText }}
+                            </div>
+                        </div>
+                        <div class="ov-stat">
+                            <div class="ov-stat__label">
+                                {{ sizeLabel }}
+                            </div>
+                            <div class="ov-stat__value">
+                                {{ sizeText }}
+                            </div>
+                        </div>
+                        <div class="ov-stat">
+                            <div class="ov-stat__label">
+                                {{ colorLabel }}
+                            </div>
+                            <div class="ov-stat__value">
+                                {{ colorText }}
+                            </div>
+                        </div>
+                        <div class="ov-stat">
+                            <div class="ov-stat__label">
+                                {{ framesLabel }}
+                            </div>
+                            <div class="ov-stat__value">
+                                {{ framesText }}
+                            </div>
+                        </div>
+                        <div class="ov-stat">
+                            <div class="ov-stat__label">
+                                {{ pathValueLabel }}
+                            </div>
+                            <div class="ov-stat__value ov-stat__value--path">
+                                {{ loadedPath }}
+                            </div>
+                        </div>
+                    </div>
+                    <Alert v-if="pixelWarning" tone="warning" roleName="status" :title="pixelWarningTitle" :description="pixelWarning" />
+                </Card>
+                <Card :title="capabilitiesCardTitle" :description="capabilitiesCardDesc">
+                    <Table
+                        :columns="capabilityColumns"
+                        :rows="capabilityRows"
+                        :loading="loadingCapabilities"
+                        :loadingLabel="loadingLabel"
+                        :loadingText="loadingText"
+                        :hasRowAction="false"
+                    />
+                </Card>
+            </div>
+        </AppShell>
+    </div>
+</template>
+<style>
+.ov-root {
+    min-height: 100vh;
+}
+.ov-body {
+    display: flex;
+    flex-direction: column;
+    gap: var(--vmz-space-4, 1rem);
+    width: min(var(--vmz-layout-max-width, 80rem), calc(100% - (var(--vmz-layout-gutter, 1rem) * 2)));
+    margin: 0 auto;
+}
+.ov-head h1 {
+    margin: 0 0 0.35rem;
+    font-size: 1.35rem;
+}
+.ov-head p {
+    margin: 0;
+    color: var(--vmz-text-steel, var(--vmz-text-muted, #8b93a7));
+}
+.ov-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--vmz-space-2, 0.5rem);
+    margin-top: var(--vmz-space-3, 0.75rem);
+}
+.ov-frame {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 16rem;
+    padding: var(--vmz-space-3, 0.75rem);
+    border: 1px solid var(--vmz-line-default, #2a3140);
+    border-radius: var(--vmz-radius-md, 8px);
+    background:
+        linear-gradient(45deg, var(--vmz-surface-mist, #23272d) 25%, transparent 25%, transparent 75%, var(--vmz-surface-mist, #23272d) 75%),
+        linear-gradient(45deg, var(--vmz-surface-mist, #23272d) 25%, transparent 25%, transparent 75%, var(--vmz-surface-mist, #23272d) 75%);
+    background-position: 0 0, 8px 8px;
+    background-size: 16px 16px;
+    background-color: var(--vmz-surface-paper, #1a1d21);
+}
+.ov-image {
+    display: block;
+    max-width: 100%;
+    max-height: 60vh;
+    object-fit: contain;
+    image-rendering: auto;
+}
+.ov-stats {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: var(--vmz-space-3, 0.75rem);
+}
+.ov-stat {
+    padding: var(--vmz-space-3, 0.75rem);
+    border: 1px solid var(--vmz-line-default, #2a3140);
+    border-radius: var(--vmz-radius-md, 8px);
+    background: var(--vmz-surface-mist, var(--vmz-surface-paper, #1a1e27));
+}
+.ov-stat__label {
+    color: var(--vmz-text-steel, #8b93a7);
+    font-size: 0.75rem;
+}
+.ov-stat__value {
+    margin-top: 0.25rem;
+    font-variant-numeric: tabular-nums;
+    font-size: 1.05rem;
+}
+.ov-stat__value--path {
+    font-family: var(--vmz-font-mono, ui-monospace, Consolas, monospace);
+    font-size: 0.8rem;
+    overflow-wrap: anywhere;
+}
+.ov-note {
+    margin: var(--vmz-space-2, 0.5rem) 0 0;
+    color: var(--vmz-text-steel, #8b93a7);
+}
+@media (max-width: 900px) {
+    .ov-stats {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+}
+@media (max-width: 560px) {
+    .ov-stats {
+        grid-template-columns: 1fr;
+    }
+}
+</style>
+<script client>
+export default class IndexPage {
+    title = "OpenViewer";
+    lead = "Inspect one local image, read its metadata and render an in-process PNG preview.";
+    navItems = [{ id: "viewer", title: "Viewer", href: "/" }];
+    openCardTitle = "Open an image";
+    openCardDesc = "Point at a local image file on this machine.";
+    pathLabel = "Image file";
+    pathDesc = "Absolute path to a supported image file.";
+    pathPlaceholder = "C:\\Pictures\\example.png";
+    previewLabel = "Preview";
+    closeLabel = "Close";
+    errorTitle = "Operation failed";
+    statusTitle = "Status";
+    canvasCardTitle = "Preview";
+    canvasCardDesc = "Rendered by the native decoder inside this process.";
+    emptyTitle = "No image loaded";
+    emptyDesc = "Enter a path and preview it to populate the canvas and metadata.";
+    loadingLabel = "Working";
+    loadingText = "Decoding image…";
+    metadataCardTitle = "Metadata";
+    metadataCardDesc = "File facts reported by the native decoder.";
+    formatLabel = "Format";
+    dimensionsLabel = "Dimensions";
+    sizeLabel = "File size";
+    colorLabel = "Colour";
+    framesLabel = "Frames";
+    pathValueLabel = "Path";
+    pixelWarningTitle = "Pixel ceiling exceeded";
+    capabilitiesCardTitle = "Capabilities";
+    capabilitiesCardDesc = "What this build can do on the current host.";
+    capabilityColumns = [
+        { id: "capability", title: "Capability" },
+        { id: "state", title: "State" },
+        { id: "detail", title: "Detail" },
+    ];
+
+    imagePath = "";
+    loading = false;
+    loadingCapabilities = false;
+    error = "";
+    status = "Ready.";
+    imageUrl = "";
+    imageAlt = "Image preview";
+    loadedPath = "—";
+    formatText = "—";
+    dimensionsText = "—";
+    sizeText = "—";
+    colorText = "—";
+    framesText = "—";
+    renderLine = "";
+    pixelWarning = "";
+    capabilityRows = [];
+    _seq = 0;
+
+    onMount() {
+        this.installHostBridge();
+        const bridge = this.bridge();
+        if (bridge) this.requestCapabilities();
+    }
+
+    bridge() {
+        const webview = globalThis.chrome && globalThis.chrome.webview;
+        return webview && webview.postMessage ? webview : null;
+    }
+
+    onPathInput(e) {
+        this.imagePath = e && e.target ? String(e.target.value || "") : "";
+    }
+
+    installHostBridge() {
+        const webview = this.bridge();
+        if (!webview || !webview.addEventListener) return;
+        webview.addEventListener("message", (event) => {
+            let data = event.data;
+            if (typeof data === "string") {
+                try {
+                    data = JSON.parse(data);
+                }
+                catch {
+                    return;
+                }
+            }
+            if (!data || typeof data !== "object") return;
+            if (data.type === "capabilitiesResult") this.applyCapabilities(data.report || {});
+            else if (data.type === "previewResult") {
+                this.loading = false;
+                this.error = "";
+                this.applyPreview(data.preview || {});
+            }
+            else if (data.type === "error") {
+                this.loading = false;
+                this.setError(data.code ? `[${data.code}] ${data.message || "unknown error"}` : String(data.message || "unknown error"));
+            }
+        });
+    }
+
+    setError(message) {
+        this.error = message;
+        this.status = "";
+    }
+
+    post(msg) {
+        const webview = this.bridge();
+        if (!webview) {
+            this.setError("Native bridge unavailable (not running inside the WebView2 host).");
+            return false;
+        }
+        webview.postMessage(JSON.stringify(msg));
+        return true;
+    }
+
+    requestCapabilities() {
+        this._seq += 1;
+        this.loadingCapabilities = true;
+        if (!this.post({ type: "capabilities", requestId: this._seq })) this.loadingCapabilities = false;
+    }
+
+    preview() {
+        const path = (this.imagePath || "").trim();
+        if (!path) {
+            this.setError("Enter the path of an image file before previewing.");
+            return;
+        }
+        this._seq += 1;
+        this.loading = true;
+        this.error = "";
+        this.status = "Decoding image…";
+        if (!this.post({ type: "preview", requestId: this._seq, path, maxEdge: 1024 })) this.loading = false;
+    }
+
+    requestClose() {
+        this.post({ type: "close" });
+    }
+
+    applyPreview(preview) {
+        const info = preview.info || {};
+        this.imageUrl = String(preview.dataUrl || "");
+        this.imageAlt = `${String(info.format || "image")} preview of ${String(info.path || "the selected file")}`;
+        this.loadedPath = String(info.path || "—");
+        this.formatText = String(info.format || "—");
+        this.dimensionsText = `${Number(info.width) || 0} × ${Number(info.height) || 0}`;
+        this.sizeText = this.formatBytes(Number(info.fileSize) || 0);
+        const frames = info.frames;
+        this.framesText = frames == null ? "not reported" : `${frames}${info.animated ? " (animated)" : ""}`;
+        this.colorText = `${String(info.colorType || "unknown")} · ${Number(info.bitsPerPixel) || 0} bpp · alpha ${info.hasAlpha ? "yes" : "no"}`;
+        this.renderLine = `source ${Number(preview.sourceWidth) || 0} × ${Number(preview.sourceHeight) || 0} · rendered ${Number(preview.width) || 0} × ${Number(preview.height) || 0}`;
+        this.pixelWarning = info.withinPixelLimit === false
+            ? "This image exceeds the decode pixel ceiling. Preview and thumbnails are refused until the limit is raised."
+            : "";
+        this.status = "Preview ready.";
+    }
+
+    applyCapabilities(report) {
+        this.loadingCapabilities = false;
+        const entries = Array.isArray(report.entries) ? report.entries : [];
+        this.capabilityRows = entries.map((entry) => {
+            const state = entry.state || {};
+            const code = state.code ? ` [${state.code}]` : "";
+            return {
+                id: String(entry.id || ""),
+                cells: [String(entry.title || entry.id || ""), `${String(state.state || "unknown")}${code}`, String(state.detail || "")],
+            };
+        });
+        this.status = `Host ${report.platform || "unknown"}.`;
+    }
+
+    formatBytes(n) {
+        if (n < 1024) return `${n} B`;
+        if (n < 1024 ** 2) return `${(n / 1024).toFixed(1)} KB`;
+        if (n < 1024 ** 3) return `${(n / 1024 ** 2).toFixed(1)} MB`;
+        return `${(n / 1024 ** 3).toFixed(2)} GB`;
+    }
+}
+</script>
