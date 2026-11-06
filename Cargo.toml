@@ -1,14 +1,35 @@
 [workspace]
 resolver = "2"
-members = ["projects/*"]
-default-members = [
-    "projects/sub_projects",
-]
-exclude = [
-    "projects/.DS_Store",
-]
+members = ["crates/core", "crates/napi"]
+default-members = ["crates/core", "crates/napi"]
+exclude = ["projects"]
+
+[workspace.package]
+version = "0.0.0"
+edition = "2024"
+rust-version = "1.90"
+authors = ["OpenViewer Authors"]
+repository = "https://github.com/nyar-os/OpenViewer"
 
 [workspace.dependencies]
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+image = { version = "0.25.10", default-features = false, features = [
+    "bmp",
+    "gif",
+    "ico",
+    "jpeg",
+    "png",
+    "pnm",
+    "tga",
+    "tiff",
+    "webp",
+] }
+gif = "0.14"
+base64 = "0.22"
+# Cross-repo git dependencies must pin the full 40-character revision.
+wae = { git = "https://github.com/doki-land/wae-framework.git", rev = "78976acad7a63fcb8f7cc0f1ba7575c0bc78a10f" }
+open-viewer-core = { path = "crates/core" }
 
 [profile.release]
 lto = true
