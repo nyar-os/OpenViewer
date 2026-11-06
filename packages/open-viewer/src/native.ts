@@ -7,6 +7,8 @@
  */
 import { createRequire } from 'node:module';
 import os from 'node:os';
+import path from 'node:path';
+import { fileURLToPath } from 'node:url';
 
 const require = createRequire(import.meta.url);
 
@@ -203,11 +205,18 @@ export interface NativeBinding {
     guiStatus(): boolean;
 }
 
-const platformPackages = ['@wae/open-viewer-win32-x64/open-viewer.win32-x64.node'];
+const PLATFORM_PACKAGE = '@wae/open-viewer-win32-x64';
 
+/**
+ * Specifiers to try: optional env override, the platform package (via
+ * `package.json#main`), then the sibling checkout package directory.
+ */
 export function nativeCandidates(): string[] {
     const override = process.env.OPEN_VIEWER_NATIVE;
-    return override ? [override, ...platformPackages] : [...platformPackages];
+    const here = path.dirname(fileURLToPath(import.meta.url));
+    const localPackage = path.resolve(here, '..', '..', 'open-viewer-win32-x64');
+    const packages = [PLATFORM_PACKAGE, localPackage];
+    return override ? [override, ...packages] : packages;
 }
 
 function load(): NativeBinding {
@@ -222,7 +231,7 @@ function load(): NativeBinding {
     }
     throw new Error(
         `OpenViewer native binding is not available for ${os.platform()}-${os.arch()}.\n` +
-            `Set OPEN_VIEWER_NATIVE to a built .node file, or install a supported platform package.\n` +
+            `Set OPEN_VIEWER_NATIVE to a built .node file, or install ${PLATFORM_PACKAGE}.\n` +
             `Tried:\n${errors.map((line) => `  - ${line}`).join('\n')}`,
     );
 }
