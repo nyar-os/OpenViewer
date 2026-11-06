@@ -4,6 +4,7 @@
     "private": true,
     "type": "module",
     "description": "OpenViewer WebView2 interface built with @vmz/ui",
+    "license": "Apache-2.0",
     "scripts": {
         "check": "vmz check .",
         "build": "vmz build . --profile static",

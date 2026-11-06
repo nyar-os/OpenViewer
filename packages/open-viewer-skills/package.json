@@ -2,6 +2,7 @@
     "name": "@wae/open-viewer-skills",
     "version": "0.0.1",
     "description": "Agent skills for the OpenViewer CLI",
+    "license": "Apache-2.0",
     "files": [
         "skills",
         "README.md"

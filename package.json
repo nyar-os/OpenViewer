@@ -4,6 +4,7 @@
     "type": "module",
     "packageManager": "pnpm@10.28.0",
     "description": "OpenViewer workspace (crates = Rust, packages = TypeScript)",
+    "license": "Apache-2.0",
     "repository": {
         "type": "git",
         "url": "https://github.com/nyar-os/OpenViewer.git"

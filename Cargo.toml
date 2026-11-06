@@ -8,6 +8,7 @@ exclude = ["projects"]
 version = "0.0.1"
 edition = "2024"
 rust-version = "1.90"
+license = "Apache-2.0"
 authors = ["OpenViewer Authors"]
 repository = "https://github.com/nyar-os/OpenViewer"
 
