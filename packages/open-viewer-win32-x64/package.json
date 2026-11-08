@@ -8,7 +8,8 @@
     "main": "open-viewer.win32-x64.node",
     "files": [
         "open-viewer.win32-x64.node",
-        "README.md"
+        "README.md",
+        "License.md"
     ],
     "engines": {
         "node": ">=18"
