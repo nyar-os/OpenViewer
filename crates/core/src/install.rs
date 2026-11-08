@@ -366,14 +366,24 @@ mod tests {
         let config_dir = root.join("OpenViewer");
         fs::create_dir_all(&config_dir).unwrap();
         fs::write(config_dir.join("config.json"), "{}").unwrap();
-        fs::write(config_dir.join("install.json"), r#"{"appVersion":"0.0.0"}"#).unwrap();
+        let marker_path = config_dir.join("install.json");
+        let current = env!("CARGO_PKG_VERSION");
 
+        fs::write(&marker_path, format!(r#"{{"appVersion":"{current}"}}"#)).unwrap();
         let plan =
             plan_install_with(Platform::Windows, &|key| env.get(key).cloned(), &InstallOptions { no_shortcut: false, reset_config: true })
                 .unwrap();
         assert!(plan.installed);
-        assert!(!plan.upgrade);
+        assert!(!plan.upgrade, "the marker already records {current}");
         assert!(plan.actions.iter().any(|action| action.kind == ActionKind::ResetConfig));
+
+        let stale = "0.0.0-stale";
+        fs::write(&marker_path, format!(r#"{{"appVersion":"{stale}"}}"#)).unwrap();
+        let plan =
+            plan_install_with(Platform::Windows, &|key| env.get(key).cloned(), &InstallOptions { no_shortcut: false, reset_config: true })
+                .unwrap();
+        assert!(plan.upgrade, "the marker still records {stale}");
+        assert_eq!(plan.installed_version.as_deref(), Some(stale));
     }
 
     #[test]
