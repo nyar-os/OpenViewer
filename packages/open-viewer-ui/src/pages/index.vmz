@@ -1,427 +1,692 @@
 <template>
-    <div data-open-viewer="root" class="ov-root" data-theme="dark">
-        <aside class="ov-sidebar" aria-label="Workspace">
-            <a href="/" class="ov-sidebar__brand">
-                <span class="ov-sidebar__mark" aria-hidden="true">
-                    OV
-                </span>
-                <span class="ov-sidebar__name">
-                    OpenViewer
-                </span>
-            </a>
-            <nav class="ov-sidebar__nav" aria-label="Navigation">
-                <a href="/" class="ov-sidebar__nav-item" data-active="true" aria-current="page">
-                    Viewer
-                </a>
-            </nav>
-            <div class="ov-sidebar__footer">
-                <button type="button" class="ov-sidebar__action" @click="requestClose">
-                    {{ closeLabel }}
+    <div data-open-viewer="root" class="ov-root">
+        <header class="ov-bar" role="toolbar" aria-label="Viewer">
+            <button type="button" class="ov-btn ov-btn--primary" @click="toggleOpen">
+                {{ openLabel }}
+            </button>
+            <form class="ov-path" v-if="openBar" @submit="preview">
+                <label class="ov-sr" for="ov-path">Image path</label>
+                <input
+                    id="ov-path"
+                    class="ov-input"
+                    type="text"
+                    spellcheck="false"
+                    :value="imagePath"
+                    :placeholder="pathPlaceholder"
+                    @input="onPathInput"
+                    @keydown="onPathKey"
+                />
+                <button type="submit" class="ov-btn" :disabled="loading">
+                    {{ previewLabel }}
+                </button>
+                <button type="button" class="ov-btn ov-btn--ghost" @click="closeOpenBar">
+                    Cancel
+                </button>
+            </form>
+            <template v-else>
+                <span class="ov-title" :title="loadedPath">{{ loadedName }}</span>
+                <span class="ov-muted">{{ dimensionsText }}</span>
+            </template>
+            <div class="ov-bar__spacer"></div>
+            <div class="ov-zoom" role="group" aria-label="Zoom">
+                <button type="button" class="ov-btn ov-btn--icon" aria-label="Zoom out" :disabled="!hasImage" @click="zoomOut">
+                    −
+                </button>
+                <button type="button" class="ov-btn ov-btn--zoom" :disabled="!hasImage" title="Fit to window (0)" @click="fitImage">
+                    {{ zoomText }}
+                </button>
+                <button type="button" class="ov-btn ov-btn--icon" aria-label="Zoom in" :disabled="!hasImage" @click="zoomIn">
+                    +
                 </button>
             </div>
-        </aside>
-        <main class="ov-main">
-            <div class="ov-body">
-                <header class="ov-head">
-                    <h1>
-                        {{ title }}
+            <button type="button" class="ov-btn" :disabled="!hasImage" title="Fit to window (0)" @click="fitImage">
+                Fit
+            </button>
+            <button type="button" class="ov-btn" :disabled="!hasImage || !canActual" :title="actualTitle" @click="setActual">
+                100%
+            </button>
+            <button
+                type="button"
+                class="ov-btn ov-btn--ghost"
+                :aria-pressed="inspectorOpen ? 'true' : 'false'"
+                title="Toggle file information (i)"
+                @click="toggleInspector"
+            >
+                Info
+            </button>
+            <button type="button" class="ov-btn ov-btn--ghost" @click="requestClose">
+                {{ closeLabel }}
+            </button>
+        </header>
+
+        <div class="ov-body">
+            <main
+                class="ov-viewport"
+                :data-dragging="dragging ? 'true' : 'false'"
+                :data-empty="hasImage ? 'false' : 'true'"
+                @wheel.prevent="onWheel"
+                @pointerdown="onPointerDown"
+                @pointermove="onPointerMove"
+                @pointerup="onPointerUp"
+                @pointercancel="onPointerUp"
+            >
+                <div v-if="!hasImage && !loading && !error" class="ov-empty">
+                    <div class="ov-empty__mark" aria-hidden="true">
+                        Image
+                    </div>
+                    <h1 class="ov-empty__title">
+                        {{ emptyTitle }}
                     </h1>
-                    <p>
-                        {{ lead }}
+                    <p class="ov-empty__desc">
+                        {{ emptyDesc }}
                     </p>
+                    <button type="button" class="ov-btn ov-btn--primary" @click="toggleOpen">
+                        Open a path…
+                    </button>
+                </div>
+                <div v-if="loading && !hasImage" class="ov-loading" role="status">
+                    <span class="ov-spinner" aria-hidden="true"></span>
+                    {{ loadingText }}
+                </div>
+                <div v-if="hasImage" class="ov-canvas" :style="canvasStyle">
+                    <img class="ov-image" :src="imageUrl" :alt="imageAlt" draggable="false" />
+                </div>
+                <div v-if="error" class="ov-banner" role="alert">
+                    <strong>{{ errorTitle }}</strong>
+                    <span>{{ error }}</span>
+                </div>
+            </main>
+
+            <aside class="ov-inspector" v-if="inspectorOpen" aria-label="File information">
+                <header class="ov-inspector__head">
+                    <span>File</span>
+                    <button type="button" class="ov-btn ov-btn--icon" aria-label="Close file information" @click="toggleInspector">
+                        ×
+                    </button>
                 </header>
-                <Card :title="openCardTitle" :description="openCardDesc">
-                    <Field
-                        :label="pathLabel"
-                        :description="pathDesc"
-                        controlId="ov-path"
-                        descriptionId="ov-path-desc"
-                        errorId="ov-path-err"
-                        describedBy="ov-path-desc"
-                        :value="imagePath"
-                        :placeholder="pathPlaceholder"
-                        @input="onPathInput"
-                    />
-                    <div class="ov-actions">
-                        <Button type="button" :loading="loading" :disabled="loading" @click="preview">
-                            {{ previewLabel }}
-                        </Button>
-                    </div>
-                    <Alert v-if="error" tone="danger" roleName="alert" :title="errorTitle" :description="error" />
-                    <Alert v-else-if="status" tone="info" roleName="status" :title="statusTitle" :description="status" />
-                </Card>
-                <Card :title="canvasCardTitle" :description="canvasCardDesc">
-                    <Empty v-if="!imageUrl && !loading" :title="emptyTitle" :description="emptyDesc" />
-                    <p v-else-if="loading && !imageUrl" class="ov-note">
-                        {{ loadingText }}
-                    </p>
-                    <div v-else class="ov-frame">
-                        <img :src="imageUrl" :alt="imageAlt" class="ov-image" />
-                    </div>
-                    <p v-if="renderLine" class="ov-note">
-                        {{ renderLine }}
-                    </p>
-                </Card>
-                <Card :title="metadataCardTitle" :description="metadataCardDesc">
-                    <div class="ov-stats">
-                        <div class="ov-stat">
-                            <div class="ov-stat__label">
-                                {{ formatLabel }}
-                            </div>
-                            <div class="ov-stat__value">
-                                {{ formatText }}
-                            </div>
-                        </div>
-                        <div class="ov-stat">
-                            <div class="ov-stat__label">
-                                {{ dimensionsLabel }}
-                            </div>
-                            <div class="ov-stat__value">
-                                {{ dimensionsText }}
-                            </div>
-                        </div>
-                        <div class="ov-stat">
-                            <div class="ov-stat__label">
-                                {{ sizeLabel }}
-                            </div>
-                            <div class="ov-stat__value">
-                                {{ sizeText }}
-                            </div>
-                        </div>
-                        <div class="ov-stat">
-                            <div class="ov-stat__label">
-                                {{ colorLabel }}
-                            </div>
-                            <div class="ov-stat__value">
-                                {{ colorText }}
-                            </div>
-                        </div>
-                        <div class="ov-stat">
-                            <div class="ov-stat__label">
-                                {{ framesLabel }}
-                            </div>
-                            <div class="ov-stat__value">
-                                {{ framesText }}
-                            </div>
-                        </div>
-                        <div class="ov-stat">
-                            <div class="ov-stat__label">
-                                {{ pathValueLabel }}
-                            </div>
-                            <div class="ov-stat__value ov-stat__value--path">
-                                {{ loadedPath }}
-                            </div>
-                        </div>
-                    </div>
-                    <Alert v-if="pixelWarning" tone="warning" roleName="status" :title="pixelWarningTitle" :description="pixelWarning" />
-                </Card>
-                <Card :title="capabilitiesCardTitle" :description="capabilitiesCardDesc">
-                    <Table
-                        :columns="capabilityColumns"
-                        :rows="capabilityRows"
-                        :loading="loadingCapabilities"
-                        :loadingLabel="loadingLabel"
-                        :loadingText="loadingText"
-                        :hasRowAction="false"
-                    />
-                </Card>
-            </div>
-        </main>
+                <dl class="ov-fields">
+                    <dt>Path</dt>
+                    <dd class="ov-fields__path" :title="loadedPath">{{ loadedPath }}</dd>
+                    <dt>Format</dt>
+                    <dd>{{ formatText }}</dd>
+                    <dt>Dimensions</dt>
+                    <dd>{{ dimensionsText }}</dd>
+                    <dt>File size</dt>
+                    <dd>{{ sizeText }}</dd>
+                    <dt>Color</dt>
+                    <dd>{{ colorText }}</dd>
+                    <dt>Frames</dt>
+                    <dd>{{ framesText }}</dd>
+                    <dt>Preview</dt>
+                    <dd>{{ renderLine }}</dd>
+                </dl>
+                <div class="ov-inspector__actions">
+                    <button type="button" class="ov-btn" :disabled="!hasImage" @click="copyPath">
+                        Copy path
+                    </button>
+                </div>
+                <p v-if="pixelWarning" class="ov-warn" role="alert">
+                    {{ pixelWarning }}
+                </p>
+            </aside>
+        </div>
+
+        <footer class="ov-status" role="status">
+            <span class="ov-status__file" :title="loadedPath">{{ loadedName }}</span>
+            <span>{{ dimensionsText }}</span>
+            <span>{{ renderLineCompact }}</span>
+            <span class="ov-status__grow"></span>
+            <span>{{ zoomText }}</span>
+            <button type="button" class="ov-status__host" @click="toggleCapabilities">
+                Host
+            </button>
+            <span :class="error ? 'ov-status__error' : ''">{{ statusMessage }}</span>
+        </footer>
+
+        <section v-if="capabilitiesOpen" class="ov-caps" aria-label="Host capabilities">
+            <header class="ov-inspector__head">
+                <span>{{ capabilitiesTitle }}</span>
+                <button type="button" class="ov-btn ov-btn--icon" aria-label="Close capabilities" @click="toggleCapabilities">
+                    ×
+                </button>
+            </header>
+            <p class="ov-caps__desc">
+                {{ capabilitiesDesc }}
+            </p>
+            <ul class="ov-caps__list">
+                <li v-for="row in capabilityRows" :key="row.id">
+                    <span>{{ row.title }}</span>
+                    <span class="ov-caps__state">{{ row.state }}</span>
+                <span class="ov-caps__detail">{{ row.detail }}</span>
+                </li>
+            </ul>
+            <p v-if="!capabilityRows.length && !loadingCapabilities" class="ov-muted">
+                {{ emptyCapsDesc }}
+            </p>
+        </section>
     </div>
 </template>
+
 <style>
-/*
- * Desktop shell: the window is the frame, not a document page. One full-bleed
- * flex row — fixed sidebar on the left, content column on the right — with no
- * max-width, no auto margins, no body margin and no shell padding.
- */
 html,
 body {
-    width: 100%;
     height: 100%;
     margin: 0;
-    padding: 0;
     overflow: hidden;
 }
-#app,
+
 .ov-root {
-    width: 100%;
-    height: 100%;
-}
-.ov-root {
+    --ov-bar: 2.25rem;
+    --ov-status: 1.5rem;
     display: flex;
-    align-items: stretch;
-    box-sizing: border-box;
-    height: 100vh;
-    overflow: hidden;
-}
-.ov-sidebar {
-    display: flex;
-    flex: 0 0 var(--ov-sidebar-width, 15rem);
     flex-direction: column;
-    box-sizing: border-box;
-    width: var(--ov-sidebar-width, 15rem);
-    min-width: 0;
+    width: 100%;
+    height: 100vh;
     min-height: 0;
-    padding: 0;
-    border-right: 1px solid var(--vmz-line-default, #2a3140);
-    background: var(--vmz-surface-mist, var(--vmz-surface-paper, #1a1e27));
+    overflow: hidden;
+    background: var(--vmz-surface-paper, #ffffff);
+    color: var(--vmz-text-ink, #1b1830);
+    font-size: 0.8125rem;
+    font-family: var(--vmz-font-sans, system-ui, sans-serif);
 }
-.ov-sidebar__brand {
+
+.ov-sr {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip: rect(0 0 0 0);
+}
+
+.ov-bar {
     display: flex;
     flex: 0 0 auto;
     align-items: center;
-    gap: 0.625rem;
-    box-sizing: border-box;
-    height: 3rem;
-    padding: 0 0.875rem;
-    border-bottom: 1px solid var(--vmz-line-default, #2a3140);
-    color: var(--vmz-text-ink, #e6e9ef);
-    font-size: 0.9375rem;
-    font-weight: 600;
-    letter-spacing: -0.01em;
-    text-decoration: none;
+    gap: 0.375rem;
+    height: var(--ov-bar);
+    padding: 0 0.5rem;
+    border-bottom: 1px solid var(--vmz-line-default, #e4e0f0);
+    background: var(--vmz-surface-mist, #f8f7fc);
+    white-space: nowrap;
+    overflow: hidden;
 }
-.ov-sidebar__mark {
+
+.ov-title {
+    min-width: 0;
+    max-width: 34%;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    font-weight: 600;
+}
+
+.ov-muted {
+    color: var(--vmz-text-tertiary, #6b6785);
+    font-variant-numeric: tabular-nums;
+}
+
+.ov-bar__spacer {
+    flex: 1 1 auto;
+    min-width: 0.5rem;
+}
+
+.ov-btn {
     display: inline-flex;
-    flex: none;
+    flex: 0 0 auto;
     align-items: center;
     justify-content: center;
-    width: 1.5rem;
-    height: 1.5rem;
-    border-radius: var(--vmz-radius-md, 6px);
-    background: var(--vmz-action-primary-background, #2563eb);
-    color: #fff;
-    font-size: 0.625rem;
-    font-weight: 700;
-    letter-spacing: 0.04em;
-}
-.ov-sidebar__nav {
-    display: flex;
-    flex: 0 0 auto;
-    flex-direction: column;
-    gap: 0.125rem;
-    padding: 0.5rem 0.5rem 0;
-}
-.ov-sidebar__nav-item {
-    display: flex;
-    align-items: center;
-    min-height: 2rem;
-    padding: 0 0.625rem;
-    border-radius: var(--vmz-radius-md, 6px);
-    color: var(--vmz-text-steel, #8b93a7);
-    font-size: 0.875rem;
-    line-height: 1.5;
-    text-decoration: none;
-}
-.ov-sidebar__nav-item[data-active="true"] {
-    background: var(--vmz-surface-paper, #1a1e27);
-    color: var(--vmz-action-primary-background, #2563eb);
-    font-weight: 600;
-}
-.ov-sidebar__footer {
-    flex: 0 0 auto;
-    margin-top: auto;
-    padding: 0.5rem;
-    border-top: 1px solid var(--vmz-line-default, #2a3140);
-}
-.ov-sidebar__action {
-    display: flex;
-    align-items: center;
-    box-sizing: border-box;
-    width: 100%;
-    min-height: 2rem;
-    padding: 0 0.625rem;
-    border: 0;
-    border-radius: var(--vmz-radius-md, 6px);
-    background: transparent;
-    color: var(--vmz-text-steel, #8b93a7);
+    height: 1.75rem;
+    padding: 0 0.525rem;
+    border: 1px solid var(--vmz-line-default, #e4e0f0);
+    border-radius: var(--vmz-radius-sm, 4px);
+    background: var(--vmz-surface-paper, #ffffff);
+    color: inherit;
     font: inherit;
-    font-size: 0.875rem;
-    line-height: 1.5;
-    text-align: left;
+    line-height: 1;
     cursor: pointer;
 }
-.ov-sidebar__action:hover {
-    background: var(--vmz-surface-paper, #1a1e27);
+
+.ov-btn:hover:not(:disabled) {
+    background: var(--vmz-action-secondary-hover, #f2f3f5);
 }
-.ov-sidebar__action:focus-visible {
-    outline: 0;
-    box-shadow: 0 0 0 3px var(--vmz-focus-ring, rgba(37, 99, 235, 0.35));
+
+.ov-btn:disabled {
+    color: var(--vmz-text-muted, #b6bac2);
+    cursor: default;
 }
-.ov-main {
-    display: flex;
-    flex: 1 1 auto;
-    flex-direction: column;
-    box-sizing: border-box;
-    width: auto;
-    min-width: 0;
-    min-height: 0;
-    max-width: none;
-    margin: 0;
+
+.ov-btn--primary {
+    border-color: var(--vmz-action-primary-background, #6e56cf);
+    background: var(--vmz-action-primary-background, #6e56cf);
+    color: #ffffff;
+}
+
+.ov-btn--primary:hover:not(:disabled) {
+    filter: brightness(0.94);
+    background: var(--vmz-action-primary-background, #6e56cf);
+}
+
+.ov-btn--ghost {
+    border-color: transparent;
+    background: transparent;
+}
+
+.ov-btn--icon {
+    width: 1.75rem;
     padding: 0;
-    overflow: hidden;
 }
-/* Content column scrolls, the shell itself never does. */
-.ov-body {
-    display: flex;
-    flex: 1 1 auto;
-    flex-direction: column;
-    gap: var(--vmz-space-4, 1rem);
-    box-sizing: border-box;
-    width: 100%;
-    min-width: 0;
-    min-height: 0;
-    margin: 0;
-    padding: var(--vmz-space-4, 1rem);
-    overflow-y: auto;
+
+.ov-btn--zoom {
+    min-width: 3.25rem;
+    font-variant-numeric: tabular-nums;
 }
-.ov-body > .vmz-ui-card {
-    flex: 0 0 auto;
-}
-.ov-head h1 {
-    margin: 0 0 0.35rem;
-    font-size: 1.35rem;
-}
-.ov-head p {
-    margin: 0;
-    color: var(--vmz-text-steel, var(--vmz-text-muted, #8b93a7));
-}
-.ov-actions {
-    display: flex;
-    flex-wrap: wrap;
-    gap: var(--vmz-space-2, 0.5rem);
-    margin-top: var(--vmz-space-3, 0.75rem);
-}
-.ov-frame {
+
+.ov-path {
     display: flex;
     align-items: center;
+    gap: 0.375rem;
+    min-width: 12rem;
+    max-width: 46rem;
+    flex: 1 1 auto;
+}
+
+.ov-input {
+    flex: 1 1 auto;
+    min-width: 8rem;
+    height: 1.75rem;
+    padding: 0 0.5rem;
+    border: 1px solid var(--vmz-line-default, #e4e0f0);
+    border-radius: var(--vmz-radius-sm, 4px);
+    background: var(--vmz-surface-paper, #ffffff);
+    color: inherit;
+    font: inherit;
+}
+
+.ov-input:focus {
+    border-color: var(--vmz-action-primary-background, #6e56cf);
+    outline: none;
+    box-shadow: 0 0 0 2px rgba(29, 99, 216, 0.16);
+}
+
+.ov-body {
+    position: relative;
+    display: flex;
+    flex: 1 1 auto;
+    min-height: 0;
+    min-width: 0;
+}
+
+.ov-viewport {
+    position: relative;
+    flex: 1 1 auto;
+    min-width: 0;
+    min-height: 0;
+    overflow: hidden;
+    background: #1b1d21;
+    cursor: grab;
+    touch-action: none;
+}
+
+.ov-viewport[data-dragging="true"] {
+    cursor: grabbing;
+}
+
+.ov-viewport[data-empty="true"] {
+    cursor: default;
+}
+
+.ov-empty,
+.ov-loading {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
     justify-content: center;
-    min-height: 16rem;
-    padding: var(--vmz-space-3, 0.75rem);
-    border: 1px solid var(--vmz-line-default, #2a3140);
-    border-radius: var(--vmz-radius-md, 8px);
-    background:
-        linear-gradient(45deg, var(--vmz-surface-mist, #23272d) 25%, transparent 25%, transparent 75%, var(--vmz-surface-mist, #23272d) 75%),
-        linear-gradient(45deg, var(--vmz-surface-mist, #23272d) 25%, transparent 25%, transparent 75%, var(--vmz-surface-mist, #23272d) 75%);
-    background-position: 0 0, 8px 8px;
-    background-size: 16px 16px;
-    background-color: var(--vmz-surface-paper, #1a1d21);
+    gap: 0.75rem;
+    padding: 2rem;
+    color: #c9ced6;
+    text-align: center;
 }
-.ov-image {
-    display: block;
-    max-width: 100%;
-    max-height: 60vh;
-    object-fit: contain;
-    image-rendering: auto;
-}
-.ov-stats {
+
+.ov-empty__mark {
     display: grid;
-    grid-template-columns: repeat(3, minmax(0, 1fr));
-    gap: var(--vmz-space-3, 0.75rem);
+    place-items: center;
+    width: 3.5rem;
+    height: 3.5rem;
+    border: 1px solid #34383f;
+    border-radius: 0.5rem;
+    color: #8f97a3;
+    font-size: 0.6875rem;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
 }
-.ov-stat {
-    padding: var(--vmz-space-3, 0.75rem);
-    border: 1px solid var(--vmz-line-default, #2a3140);
-    border-radius: var(--vmz-radius-md, 8px);
-    background: var(--vmz-surface-mist, var(--vmz-surface-paper, #1a1e27));
+
+.ov-empty__title {
+    margin: 0;
+    font-size: 1rem;
+    font-weight: 600;
+    color: #e8ebef;
 }
-.ov-stat__label {
-    color: var(--vmz-text-steel, #8b93a7);
-    font-size: 0.75rem;
+
+.ov-empty__desc {
+    max-width: 26rem;
+    margin: 0;
+    color: #9aa2ad;
 }
-.ov-stat__value {
-    margin-top: 0.25rem;
-    font-variant-numeric: tabular-nums;
-    font-size: 1.05rem;
+
+.ov-spinner {
+    width: 1.25rem;
+    height: 1.25rem;
+    border: 2px solid #3a3f47;
+    border-top-color: #d7dbe1;
+    border-radius: 50%;
+    animation: ov-spin 0.8s linear infinite;
 }
-.ov-stat__value--path {
-    font-family: var(--vmz-font-mono, ui-monospace, Consolas, monospace);
-    font-size: 0.8rem;
-    overflow-wrap: anywhere;
-}
-.ov-note {
-    margin: var(--vmz-space-2, 0.5rem) 0 0;
-    color: var(--vmz-text-steel, #8b93a7);
-}
-@media (max-width: 900px) {
-    .ov-stats {
-        grid-template-columns: repeat(2, minmax(0, 1fr));
+
+@keyframes ov-spin {
+    to {
+        transform: rotate(360deg);
     }
 }
-@media (max-width: 560px) {
-    .ov-stats {
-        grid-template-columns: 1fr;
+
+.ov-canvas {
+    position: absolute;
+    left: 50%;
+    top: 50%;
+    transform-origin: center center;
+    will-change: transform;
+}
+
+.ov-image {
+    display: block;
+    width: 100%;
+    height: 100%;
+    user-select: none;
+    -webkit-user-drag: none;
+}
+
+.ov-banner {
+    position: absolute;
+    top: 0.5rem;
+    left: 50%;
+    z-index: 4;
+    display: flex;
+    flex-direction: column;
+    gap: 0.125rem;
+    max-width: min(42rem, calc(100% - 2rem));
+    padding: 0.5rem 0.75rem;
+    transform: translateX(-50%);
+    border: 1px solid var(--vmz-status-danger-border, #f2b8b5);
+    border-radius: var(--vmz-radius-md, 6px);
+    background: var(--vmz-status-danger-background, #fff1f0);
+    color: var(--vmz-status-danger-foreground, #b42318);
+    box-shadow: 0 4px 14px rgba(17, 24, 39, 0.16);
+}
+
+.ov-banner strong {
+    font-size: 0.75rem;
+}
+
+.ov-banner span {
+    overflow-wrap: anywhere;
+}
+
+.ov-inspector {
+    display: flex;
+    flex: 0 0 17.5rem;
+    flex-direction: column;
+    min-height: 0;
+    border-left: 1px solid var(--vmz-line-default, #e4e0f0);
+    background: var(--vmz-surface-paper, #ffffff);
+    overflow: auto;
+}
+
+.ov-inspector__head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    height: 2rem;
+    padding: 0 0.5rem 0 0.75rem;
+    border-bottom: 1px solid var(--vmz-line-subtle, #f0edf8);
+    background: var(--vmz-surface-mist, #f8f7fc);
+    font-size: 0.75rem;
+    font-weight: 600;
+}
+
+.ov-fields {
+    display: grid;
+    grid-template-columns: 5.5rem minmax(0, 1fr);
+    gap: 0.25rem 0.5rem;
+    margin: 0;
+    padding: 0.75rem;
+    font-size: 0.75rem;
+}
+
+.ov-fields dt {
+    color: var(--vmz-text-tertiary, #6b6785);
+}
+
+.ov-fields dd {
+    min-width: 0;
+    margin: 0;
+    overflow-wrap: anywhere;
+    font-variant-numeric: tabular-nums;
+}
+
+.ov-fields__path {
+    cursor: text;
+    user-select: all;
+}
+
+.ov-inspector__actions {
+    padding: 0 0.75rem 0.75rem;
+}
+
+.ov-warn {
+    margin: 0 0.75rem 0.75rem;
+    padding: 0.375rem 0.5rem;
+    border-radius: var(--vmz-radius-sm, 4px);
+    background: var(--vmz-status-warning-background, #fff8e6);
+    color: var(--vmz-status-warning-foreground, #8a5a00);
+    font-size: 0.71875rem;
+}
+
+.ov-status {
+    display: flex;
+    flex: 0 0 auto;
+    align-items: center;
+    gap: 0.75rem;
+    height: var(--ov-status);
+    padding: 0 0.5rem;
+    border-top: 1px solid var(--vmz-line-default, #e4e0f0);
+    background: var(--vmz-surface-mist, #f8f7fc);
+    color: var(--vmz-text-tertiary, #6b6785);
+    font-size: 0.71875rem;
+    font-variant-numeric: tabular-nums;
+    white-space: nowrap;
+    overflow: hidden;
+}
+
+.ov-status__file {
+    max-width: 26%;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    color: var(--vmz-text-ink, #1b1830);
+}
+
+.ov-status__grow {
+    flex: 1 1 auto;
+}
+
+.ov-status__host {
+    padding: 0 0.25rem;
+    border: 0;
+    background: transparent;
+    color: inherit;
+    font: inherit;
+    text-decoration: underline;
+    cursor: pointer;
+}
+
+.ov-status__error {
+    max-width: 40%;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    color: var(--vmz-status-danger-foreground, #b42318);
+}
+
+.ov-caps {
+    position: absolute;
+    right: 0.75rem;
+    bottom: calc(var(--ov-status) + 0.75rem);
+    z-index: 6;
+    display: flex;
+    flex-direction: column;
+    width: min(24rem, calc(100% - 1.5rem));
+    max-height: 60vh;
+    border: 1px solid var(--vmz-line-default, #e4e0f0);
+    border-radius: var(--vmz-radius-md, 6px);
+    background: var(--vmz-surface-paper, #ffffff);
+    box-shadow: 0 10px 30px rgba(17, 24, 39, 0.18);
+    overflow: auto;
+}
+
+.ov-caps__desc {
+    margin: 0.5rem 0.75rem;
+    color: var(--vmz-text-tertiary, #6b6785);
+    font-size: 0.71875rem;
+}
+
+.ov-caps__list {
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+    margin: 0;
+    padding: 0 0.75rem 0.75rem;
+    list-style: none;
+}
+
+.ov-caps__list li {
+    display: grid;
+    grid-template-columns: minmax(6rem, 1fr) auto;
+    gap: 0.125rem 0.5rem;
+    padding: 0.25rem 0;
+    border-top: 1px solid var(--vmz-line-subtle, #f0edf8);
+    font-size: 0.71875rem;
+}
+
+.ov-caps__state {
+    color: var(--vmz-text-ink, #1b1830);
+    font-variant-numeric: tabular-nums;
+}
+
+.ov-caps__detail {
+    grid-column: 1 / -1;
+    color: var(--vmz-text-tertiary, #6b6785);
+    overflow-wrap: anywhere;
+}
+
+@media (max-width: 900px) {
+    .ov-muted {
+        display: none;
+    }
+
+    .ov-title {
+        max-width: 24%;
+    }
+
+    .ov-inspector {
+        position: absolute;
+        top: 0;
+        right: 0;
+        bottom: 0;
+        z-index: 5;
+        width: min(17.5rem, 78vw);
+        flex-basis: auto;
+        box-shadow: -8px 0 24px rgba(17, 24, 39, 0.18);
+    }
+
+    .ov-status__file {
+        max-width: 38%;
     }
 }
 </style>
+
 <script client>
-export default class IndexPage {
-    title = "OpenViewer";
-    lead = "Inspect one local image, read its metadata and render an in-process PNG preview.";
-    openCardTitle = "Open an image";
-    openCardDesc = "Point at a local image file on this machine.";
-    pathLabel = "Image file";
-    pathDesc = "Absolute path to a supported image file.";
-    pathPlaceholder = "C:\\Pictures\\example.png";
+/**
+ * Viewer page.
+ *
+ * The page renders one decoded preview and the host capability report. Decoding,
+ * orientation, and pixel limits live in the Rust `core` crate; requests go
+ * through the WebView bridge implemented by `wae::webview`.
+ */
+export default class ViewerPage {
+    openLabel = "Open";
     previewLabel = "Preview";
     closeLabel = "Close";
-    errorTitle = "Operation failed";
-    statusTitle = "Status";
-    canvasCardTitle = "Preview";
-    canvasCardDesc = "Rendered by the native decoder inside this process.";
-    emptyTitle = "No image loaded";
-    emptyDesc = "Enter a path and preview it to populate the canvas and metadata.";
-    loadingLabel = "Working";
+    pathPlaceholder = "C:\\Pictures\\sample.png";
     loadingText = "Decoding image…";
-    metadataCardTitle = "Metadata";
-    metadataCardDesc = "File facts reported by the native decoder.";
-    formatLabel = "Format";
-    dimensionsLabel = "Dimensions";
-    sizeLabel = "File size";
-    colorLabel = "Colour";
-    framesLabel = "Frames";
-    pathValueLabel = "Path";
-    pixelWarningTitle = "Pixel ceiling exceeded";
-    capabilitiesCardTitle = "Capabilities";
-    capabilitiesCardDesc = "What this build can do on the current host.";
-    capabilityColumns = [
-        { id: "capability", title: "Capability" },
-        { id: "state", title: "State" },
-        { id: "detail", title: "Detail" },
-    ];
+    errorTitle = "Preview failed";
+    emptyTitle = "No image open";
+    emptyDesc = "Open an image by path. The host does not expose a file picker, so paste or type an absolute path.";
+    capabilitiesTitle = "Host capabilities";
+    capabilitiesDesc = "Availability reported by crates/core. Unavailable operations fail with structured codes.";
+    emptyCapsDesc = "No capability report yet.";
 
     imagePath = "";
+    openBar = false;
     loading = false;
-    loadingCapabilities = false;
     error = "";
-    status = "Ready.";
+    status = "";
     imageUrl = "";
-    imageAlt = "Image preview";
-    loadedPath = "—";
+    imageAlt = "";
+    loadedPath = "";
+    loadedName = "No image";
+    sourceWidth = 0;
+    sourceHeight = 0;
+    renderWidth = 0;
+    renderHeight = 0;
+    withinPixelLimit = true;
+    zoom = 100;
+    panX = 0;
+    panY = 0;
+    dragging = false;
+    dragStartX = 0;
+    dragStartY = 0;
+    dragOriginX = 0;
+    dragOriginY = 0;
+    fullLoaded = false;
+    pendingActual = false;
+    inspectorOpen = false;
+    capabilitiesOpen = false;
+    loadingCapabilities = false;
+    capabilityRows = [];
     formatText = "—";
     dimensionsText = "—";
     sizeText = "—";
     colorText = "—";
     framesText = "—";
-    renderLine = "";
+    renderLine = "—";
     pixelWarning = "";
-    capabilityRows = [];
+    hasImage = false;
+    zoomText = "—";
+    canActual = false;
+    actualTitle = "Show at native size (1)";
+    canvasStyle = "";
+    renderLineCompact = "—";
+    statusMessage = "Ready";
     _seq = 0;
 
     onMount() {
         this.installHostBridge();
-        const bridge = this.bridge();
-        if (bridge) this.requestCapabilities();
+        this.installKeyboard();
+        this.refreshDerived();
+        if (this.bridge()) this.requestCapabilities();
     }
 
     bridge() {
         const webview = globalThis.chrome && globalThis.chrome.webview;
         return webview && webview.postMessage ? webview : null;
-    }
-
-    onPathInput(e) {
-        this.imagePath = e && e.target ? String(e.target.value || "") : "";
     }
 
     installHostBridge() {
@@ -451,9 +716,90 @@ export default class IndexPage {
         });
     }
 
+    installKeyboard() {
+        document.addEventListener("keydown", (event) => {
+            const target = event.target;
+            const typing = target && (target.tagName === "INPUT" || target.tagName === "TEXTAREA");
+            if (typing) return;
+            if (event.key === "+" || event.key === "=") {
+                event.preventDefault();
+                this.zoomIn();
+            }
+            else if (event.key === "-") {
+                event.preventDefault();
+                this.zoomOut();
+            }
+            else if (event.key === "0") {
+                event.preventDefault();
+                this.fitImage();
+            }
+            else if (event.key === "1") {
+                event.preventDefault();
+                this.setActual();
+            }
+            else if (event.key === "i" || event.key === "I") {
+                event.preventDefault();
+                this.toggleInspector();
+            }
+            else if (event.key === "Escape") {
+                if (this.capabilitiesOpen) this.capabilitiesOpen = false;
+                else if (this.inspectorOpen) this.inspectorOpen = false;
+                else if (this.openBar) this.closeOpenBar();
+            }
+        });
+    }
+
+    refreshDerived() {
+        this.hasImage = this.imageUrl.length > 0;
+        this.zoomText = `${Math.round(this.zoom)}%`;
+        this.canActual = this.hasImage
+            && this.withinPixelLimit
+            && Math.max(this.sourceWidth, this.sourceHeight) <= 8192;
+        this.actualTitle = !this.withinPixelLimit
+            ? "The image exceeds the decode pixel ceiling"
+            : (!this.canActual ? "The image exceeds the 8192 px preview limit" : "Show at native size (1)");
+        const scale = this.zoom / 100;
+        this.canvasStyle = `width:${this.sourceWidth}px;height:${this.sourceHeight}px;transform:translate(-50%, -50%) translate(${this.panX}px, ${this.panY}px) scale(${scale});`;
+        if (!this.hasImage) {
+            this.renderLineCompact = "—";
+        }
+        else {
+            const ratio = this.sourceWidth ? Math.max(1, Math.round((this.renderWidth / this.sourceWidth) * 100)) : 100;
+            this.renderLineCompact = ratio >= 99 ? "full decode" : `${ratio}% decode`;
+        }
+        this.statusMessage = this.error || this.status || "Ready";
+    }
+
+    onPathInput(e) {
+        this.imagePath = e && e.target ? String(e.target.value || "") : "";
+    }
+
+    onPathKey(e) {
+        if (e && e.key === "Enter") this.preview();
+        else if (e && e.key === "Escape") this.closeOpenBar();
+    }
+
+    toggleOpen() {
+        this.openBar = !this.openBar;
+        if (this.openBar) {
+            setTimeout(() => {
+                const input = document.getElementById("ov-path");
+                if (input) {
+                    input.focus();
+                    input.select();
+                }
+            }, 0);
+        }
+    }
+
+    closeOpenBar() {
+        this.openBar = false;
+    }
+
     setError(message) {
         this.error = message;
         this.status = "";
+        this.refreshDerived();
     }
 
     post(msg) {
@@ -478,11 +824,17 @@ export default class IndexPage {
             this.setError("Enter the path of an image file before previewing.");
             return;
         }
+        this.pendingActual = false;
+        this.load("preview", 2048, "Decoding image…");
+    }
+
+    load(type, maxEdge, message) {
         this._seq += 1;
         this.loading = true;
         this.error = "";
-        this.status = "Decoding image…";
-        if (!this.post({ type: "preview", requestId: this._seq, path, maxEdge: 1024 })) this.loading = false;
+        this.status = message;
+        if (!this.post({ type, requestId: this._seq, path: (this.imagePath || "").trim(), maxEdge })) this.loading = false;
+        this.refreshDerived();
     }
 
     requestClose() {
@@ -492,19 +844,36 @@ export default class IndexPage {
     applyPreview(preview) {
         const info = preview.info || {};
         this.imageUrl = String(preview.dataUrl || "");
-        this.imageAlt = `${String(info.format || "image")} preview of ${String(info.path || "the selected file")}`;
         this.loadedPath = String(info.path || "—");
+        this.loadedName = this.basename(this.loadedPath);
+        this.imageAlt = `${String(info.format || "image")} preview of ${this.loadedPath}`;
+        this.sourceWidth = Number(info.width) || Number(preview.sourceWidth) || 0;
+        this.sourceHeight = Number(info.height) || Number(preview.sourceHeight) || 0;
+        this.renderWidth = Number(preview.width) || 0;
+        this.renderHeight = Number(preview.height) || 0;
+        this.withinPixelLimit = info.withinPixelLimit !== false;
         this.formatText = String(info.format || "—");
-        this.dimensionsText = `${Number(info.width) || 0} × ${Number(info.height) || 0}`;
+        this.dimensionsText = this.sourceWidth && this.sourceHeight ? `${this.sourceWidth} × ${this.sourceHeight}` : "—";
         this.sizeText = this.formatBytes(Number(info.fileSize) || 0);
         const frames = info.frames;
         this.framesText = frames == null ? "not reported" : `${frames}${info.animated ? " (animated)" : ""}`;
         this.colorText = `${String(info.colorType || "unknown")} · ${Number(info.bitsPerPixel) || 0} bpp · alpha ${info.hasAlpha ? "yes" : "no"}`;
-        this.renderLine = `source ${Number(preview.sourceWidth) || 0} × ${Number(preview.sourceHeight) || 0} · rendered ${Number(preview.width) || 0} × ${Number(preview.height) || 0}`;
-        this.pixelWarning = info.withinPixelLimit === false
-            ? "This image exceeds the decode pixel ceiling. Preview and thumbnails are refused until the limit is raised."
-            : "";
-        this.status = "Preview ready.";
+        this.renderLine = `source ${this.sourceWidth} × ${this.sourceHeight} · rendered ${this.renderWidth} × ${this.renderHeight}`;
+        this.pixelWarning = this.withinPixelLimit ? "" : "This image exceeds the decode pixel ceiling, so the preview was refused.";
+        this.status = this.withinPixelLimit ? "Preview ready." : "Preview refused by the pixel ceiling.";
+        if (this.pendingActual) {
+            this.pendingActual = false;
+            this.fullLoaded = true;
+            this.zoom = 100;
+            this.panX = 0;
+            this.panY = 0;
+            this.refreshDerived();
+        }
+        else {
+            this.fullLoaded = this.renderWidth >= this.sourceWidth && this.renderHeight >= this.sourceHeight;
+            this.refreshDerived();
+            this.fitImage();
+        }
     }
 
     applyCapabilities(report) {
@@ -515,10 +884,122 @@ export default class IndexPage {
             const code = state.code ? ` [${state.code}]` : "";
             return {
                 id: String(entry.id || ""),
-                cells: [String(entry.title || entry.id || ""), `${String(state.state || "unknown")}${code}`, String(state.detail || "")],
+                title: String(entry.title || entry.id || ""),
+                state: `${String(state.state || "unknown")}${code}`,
+                detail: String(state.detail || ""),
             };
         });
         this.status = `Host ${report.platform || "unknown"}.`;
+        this.refreshDerived();
+    }
+
+    toggleCapabilities() {
+        this.capabilitiesOpen = !this.capabilitiesOpen;
+        if (this.capabilitiesOpen && !this.capabilityRows.length && !this.loadingCapabilities) this.requestCapabilities();
+    }
+
+    toggleInspector() {
+        this.inspectorOpen = !this.inspectorOpen;
+    }
+
+    fitImage() {
+        if (!this.hasImage || !this.sourceWidth || !this.sourceHeight) return;
+        const viewport = document.querySelector(".ov-viewport");
+        if (!viewport) return;
+        const rect = viewport.getBoundingClientRect();
+        const scale = Math.min((rect.width - 32) / this.sourceWidth, (rect.height - 32) / this.sourceHeight);
+        this.zoom = Math.max(5, Math.min(1600, scale * 100));
+        this.panX = 0;
+        this.panY = 0;
+        this.status = "Fit to window.";
+        this.refreshDerived();
+    }
+
+    setActual() {
+        if (!this.canActual) {
+            this.setError(this.actualTitle);
+            return;
+        }
+        if (!this.fullLoaded) {
+            this.pendingActual = true;
+            this.load("preview", Math.max(this.sourceWidth, this.sourceHeight), "Loading native-size decode…");
+            return;
+        }
+        this.zoom = 100;
+        this.panX = 0;
+        this.panY = 0;
+        this.status = "Actual pixels (100%).";
+        this.refreshDerived();
+    }
+
+    zoomIn() {
+        if (!this.hasImage) return;
+        this.zoom = Math.min(1600, this.zoom + (this.zoom < 100 ? 10 : 25));
+        this.status = `Zoom ${this.zoomText}.`;
+        this.refreshDerived();
+    }
+
+    zoomOut() {
+        if (!this.hasImage) return;
+        this.zoom = Math.max(5, this.zoom - (this.zoom <= 100 ? 10 : 25));
+        this.status = `Zoom ${this.zoomText}.`;
+        this.refreshDerived();
+    }
+
+    onWheel(e) {
+        if (!this.hasImage) return;
+        const delta = e && e.deltaY ? e.deltaY : 0;
+        if (!delta) return;
+        this.zoom = Math.max(5, Math.min(1600, this.zoom + (delta < 0 ? 10 : -10)));
+        this.status = `Zoom ${this.zoomText}.`;
+        this.refreshDerived();
+    }
+
+    onPointerDown(e) {
+        if (!this.hasImage || !e || e.button !== 0) return;
+        this.dragging = true;
+        this.dragStartX = e.clientX;
+        this.dragStartY = e.clientY;
+        this.dragOriginX = this.panX;
+        this.dragOriginY = this.panY;
+        if (e.currentTarget && e.currentTarget.setPointerCapture) e.currentTarget.setPointerCapture(e.pointerId);
+    }
+
+    onPointerMove(e) {
+        if (!this.dragging || !e) return;
+        this.panX = this.dragOriginX + (e.clientX - this.dragStartX);
+        this.panY = this.dragOriginY + (e.clientY - this.dragStartY);
+        this.refreshDerived();
+    }
+
+    onPointerUp(e) {
+        if (!this.dragging) return;
+        this.dragging = false;
+        if (e && e.currentTarget && e.currentTarget.releasePointerCapture && e.pointerId != null) {
+            try {
+                e.currentTarget.releasePointerCapture(e.pointerId);
+            }
+            catch {
+                // The pointer may already be released by the host.
+            }
+        }
+    }
+
+    async copyPath() {
+        if (!this.hasImage) return;
+        try {
+            await navigator.clipboard.writeText(this.loadedPath);
+            this.status = "Path copied.";
+            this.refreshDerived();
+        }
+        catch {
+            this.setError("Clipboard access was refused by the host.");
+        }
+    }
+
+    basename(path) {
+        const parts = String(path || "").split(/[\\/]/);
+        return parts[parts.length - 1] || "No image";
     }
 
     formatBytes(n) {
@@ -529,3 +1010,4 @@ export default class IndexPage {
     }
 }
 </script>
+
