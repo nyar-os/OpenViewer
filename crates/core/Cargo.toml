@@ -3,6 +3,7 @@ name = "open-viewer-core"
 version.workspace = true
 edition.workspace = true
 rust-version.workspace = true
+license.workspace = true
 authors.workspace = true
 repository.workspace = true
 description = "OpenViewer domain core: in-process image decoding, metadata, thumbnails and capability states"

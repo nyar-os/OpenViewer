@@ -98,5 +98,5 @@ format not listed is not claimed.
 
 ## License
 
-See [`License.md`](./License.md). Package manifests in this repository do not
-declare a license field yet.
+See [`License.md`](./License.md). Cargo and npm manifests in this repository all
+declare `Apache-2.0`.
