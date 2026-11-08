@@ -184,6 +184,11 @@ export interface GuiOptions {
     url?: string;
     width?: number;
     height?: number;
+    /**
+     * What a second open request does in single-window mode. Defaults to the
+     * `window.policy.secondLaunch` value in `wae-runtime.json`, or `focus`.
+     */
+    secondLaunch?: 'focus' | 'reject';
 }
 
 export interface NativeBinding {

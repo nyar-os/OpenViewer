@@ -26,6 +26,10 @@ pub mod codes {
     pub const UNSUPPORTED_PLATFORM: &str = "unsupported_platform";
     /// A capability that is normally available reported `ready`.
     pub const READY: &str = "ready";
+    /// A second launch was rejected by the declared window policy.
+    pub const WINDOW_SECOND_LAUNCH_REJECTED: &str = "window_second_launch_rejected";
+    /// The declared window policy carried a value the host does not understand.
+    pub const WINDOW_CONFIG_INVALID: &str = "window_config_invalid";
     /// A non-capability message without a more specific code.
     pub const MESSAGE: &str = "message";
 }
@@ -52,6 +56,11 @@ impl Error {
     /// A caller supplied an invalid argument.
     pub fn invalid(message: impl Into<String>) -> Self {
         Self { code: codes::INVALID_ARGUMENT, state: None, message: message.into() }
+    }
+
+    /// A request refused by a declared policy, with a stable script-facing code.
+    pub fn policy(code: &'static str, message: impl Into<String>) -> Self {
+        Self { code, state: None, message: message.into() }
     }
 
     /// A path does not exist.

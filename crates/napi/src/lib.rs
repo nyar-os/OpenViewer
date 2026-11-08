@@ -251,11 +251,22 @@ fn open_gui(ctx: CallContext) -> Result<JsValue> {
     let title = optional_string(arg, "title")?.unwrap_or_else(|| "OpenViewer".to_string());
     let width = optional_u32(arg, "width")?.unwrap_or(1280) as i32;
     let height = optional_u32(arg, "height")?.unwrap_or(860) as i32;
-    let params = json!({ "contentDir": content_dir, "url": url, "title": title, "width": width, "height": height });
+    let second_launch = match optional_string(arg, "secondLaunch")? {
+        Some(value) if value == "focus" || value == "reject" => value,
+        Some(value) => {
+            return Err(core_error(CoreError::policy(
+                open_viewer_core::codes::WINDOW_CONFIG_INVALID,
+                format!("`secondLaunch` must be `focus` or `reject`, got `{value}`"),
+            )));
+        }
+        None => "focus".to_string(),
+    };
+    let params =
+        json!({ "contentDir": content_dir, "url": url, "title": title, "width": width, "height": height });
     audit::run(Operation::GuiOpen.capability(), mode(Operation::GuiOpen), params, || {
         let options = OpenOptions { title, width, height, content_dir, url };
-        gui::open(options)?;
-        Ok(((), Summary::new(1, "viewer window opened")))
+        gui::open(options, &second_launch)?;
+        Ok(((), Summary::new(1, "viewer window opened or focused")))
     })
     .map_err(core_error)?;
     ctx.env().undefined()

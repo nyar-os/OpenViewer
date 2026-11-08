@@ -29,7 +29,7 @@ image = { version = "0.25.10", default-features = false, features = [
 gif = "0.14"
 base64 = "0.22"
 # Cross-repo git dependencies must pin the full 40-character revision.
-wae = { git = "https://github.com/doki-land/wae-framework.git", rev = "b5d555cc9f492858c602b62c3bd46a6be69012d4" }
+wae = { git = "https://github.com/doki-land/wae-framework.git", rev = "66f5d003fec85e28503968fd0a6a271beef0f389" }
 open-viewer-core = { path = "crates/core" }
 
 [profile.release]

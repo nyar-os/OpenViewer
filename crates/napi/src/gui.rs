@@ -21,13 +21,23 @@ thread_local! {
     static HOST: RefCell<Option<WebViewHost>> = const { RefCell::new(None) };
 }
 
-/// Open the window. Re-opening an already open host is rejected.
-pub fn open(options: OpenOptions) -> CoreResult<()> {
+/// Open the window, or focus it when the declared policy allows a second launch.
+pub fn open(options: OpenOptions, second_launch: &str) -> CoreResult<()> {
     HOST.with(|slot| {
         let mut slot = slot.borrow_mut();
-        if slot.is_some() {
-            return Err(CoreError::invalid("the viewer window is already open"));
+        if let Some(host) = slot.as_mut()
+            && host.is_alive()
+        {
+            if second_launch == "reject" {
+                return Err(CoreError::policy(
+                    core::codes::WINDOW_SECOND_LAUNCH_REJECTED,
+                    "a window is already open and `window.secondLaunch` is `reject`",
+                ));
+            }
+            return host.focus().map_err(webview_error);
         }
+        // A host left in the slot without a live window is stale.
+        *slot = None;
         let host = webview::open(options, Box::new(PageHandler)).map_err(webview_error)?;
         *slot = Some(host);
         Ok(())
