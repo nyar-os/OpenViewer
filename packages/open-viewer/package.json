@@ -40,7 +40,7 @@
         "directory": "packages/open-viewer"
     },
     "dependencies": {
-        "@wae/commander": "0.0.3"
+        "@wae/commander": "0.0.6"
     },
     "optionalDependencies": {
         "@wae/open-viewer-win32-x64": "workspace:*"
