@@ -8,6 +8,7 @@ export default {
     native: {
         crate: 'open-viewer-napi',
         cdylib: 'open_viewer_napi',
+        targetEnv: 'OPEN_VIEWER_TARGET',
         targets: [
             {
                 platform: 'win32',
