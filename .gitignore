@@ -27,3 +27,6 @@ packages/open-viewer-ui/.cache/
 .vscode/
 .idea/
 *.log
+
+# npm secrets (nifty)
+.secrets/
