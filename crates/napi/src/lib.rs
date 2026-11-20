@@ -261,8 +261,7 @@ fn open_gui(ctx: CallContext) -> Result<JsValue> {
         }
         None => "focus".to_string(),
     };
-    let params =
-        json!({ "contentDir": content_dir, "url": url, "title": title, "width": width, "height": height });
+    let params = json!({ "contentDir": content_dir, "url": url, "title": title, "width": width, "height": height });
     audit::run(Operation::GuiOpen.capability(), mode(Operation::GuiOpen), params, || {
         let options = OpenOptions { title, width, height, content_dir, url };
         gui::open(options, &second_launch)?;
