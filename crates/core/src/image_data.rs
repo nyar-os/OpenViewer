@@ -139,8 +139,16 @@ pub fn info(path: impl AsRef<Path>) -> Result<ImageInfo> {
 }
 
 /// Decode `path` to RGBA8, enforcing [`MAX_PIXELS`].
+///
+/// PNG and JPEG go through the portable `media-image` decoders, so a decoded
+/// image does not depend on the host codec set. Every other supported container
+/// keeps the `image` backend until the media layer owns it.
 pub fn decode(path: impl AsRef<Path>) -> Result<DecodedImage> {
     let path = path.as_ref();
+    if let Some(decoded) = decode_portable(path)? {
+        return Ok(decoded);
+    }
+
     let (_format, width, height) = dimensions(path)?;
     enforce_pixel_limit(width, height)?;
 
@@ -155,12 +163,21 @@ pub fn decode(path: impl AsRef<Path>) -> Result<DecodedImage> {
 pub fn thumbnail(path: impl AsRef<Path>, max_edge: u32) -> Result<Thumbnail> {
     validate_max_edge(max_edge)?;
     let path = path.as_ref();
-    let (_format, width, height) = dimensions(path)?;
-    enforce_pixel_limit(width, height)?;
-
-    let reader = ImageReader::open(path).map_err(Error::io)?;
-    let decoded = reader.decode().map_err(|error| Error::decode(error.to_string()))?;
-    let (width, height) = decoded.dimensions();
+    let (width, height, decoded) = match decode_portable(path)? {
+        Some(decoded) => {
+            let buffer = image::RgbaImage::from_raw(decoded.width, decoded.height, decoded.rgba)
+                .ok_or_else(|| Error::decode("decoded pixel buffer does not match its dimensions"))?;
+            (decoded.width, decoded.height, image::DynamicImage::ImageRgba8(buffer))
+        }
+        None => {
+            let (_format, width, height) = dimensions(path)?;
+            enforce_pixel_limit(width, height)?;
+            let reader = ImageReader::open(path).map_err(Error::io)?;
+            let decoded = reader.decode().map_err(|error| Error::decode(error.to_string()))?;
+            let (width, height) = decoded.dimensions();
+            (width, height, decoded)
+        }
+    };
 
     let scaled = if width <= max_edge && height <= max_edge { decoded } else { decoded.thumbnail(max_edge, max_edge) };
     let rgba = scaled.to_rgba8();
@@ -196,6 +213,51 @@ pub fn write_thumbnail(path: impl AsRef<Path>, out: impl AsRef<Path>, max_edge: 
         source_height: thumbnail.source_height,
         bytes: thumbnail.png.len() as u64,
     })
+}
+
+/// The eight-byte PNG signature; also the shortest head worth sniffing.
+const PNG_SIGNATURE: &[u8; 8] = b"\x89PNG\r\n\x1a\n";
+
+/// Names the portable decoder for a container, or `None` when the `image`
+/// backend still owns it.
+fn portable_kind(head: &[u8]) -> Option<&'static str> {
+    if head.starts_with(PNG_SIGNATURE) {
+        Some("png")
+    }
+    else if head.starts_with(&[0xFF, 0xD8]) {
+        Some("jpeg")
+    }
+    else {
+        None
+    }
+}
+
+/// Decodes a PNG/JPEG through `media-image`, or returns `None` for every other
+/// container so the caller can fall back to the `image` backend.
+fn decode_portable(path: &Path) -> Result<Option<DecodedImage>> {
+    let mut head = [0u8; 8];
+    let mut file = File::open(path).map_err(|error| {
+        if error.kind() == std::io::ErrorKind::NotFound {
+            Error::not_found(format!("image not found: {}", path.display()))
+        }
+        else {
+            Error::io(error)
+        }
+    })?;
+    let read = file.read(&mut head).map_err(Error::io)?;
+    let Some(kind) = portable_kind(&head[..read])
+    else {
+        return Ok(None);
+    };
+    drop(file);
+
+    let bytes = fs::read(path).map_err(Error::io)?;
+    let budget = usize::try_from(MAX_PIXELS).unwrap_or(usize::MAX);
+    match media_image::decode(&bytes, media_image::DecodeLimits::pixel_budget(budget)) {
+        Ok(decoded) => Ok(Some(DecodedImage { width: decoded.bitmap.width, height: decoded.bitmap.height, rgba: decoded.bitmap.rgba })),
+        Err(media_image::DecodeError::PixelBudget { width, height, .. }) => Err(Error::pixel_limit(width, height, MAX_PIXELS)),
+        Err(error) => Err(Error::decode(format!("portable {kind} decode failed: {error}"))),
+    }
 }
 
 fn validate_max_edge(max_edge: u32) -> Result<()> {

@@ -11,5 +11,6 @@ description = "OpenViewer domain core: in-process image decoding, metadata, thum
 [dependencies]
 gif = { workspace = true }
 image = { workspace = true }
+media-image = { workspace = true }
 serde = { workspace = true }
 serde_json = { workspace = true }
