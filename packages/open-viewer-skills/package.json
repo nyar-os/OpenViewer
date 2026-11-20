@@ -5,8 +5,7 @@
     "license": "Apache-2.0",
     "files": [
         "skills",
-        "README.md",
-        "License.md"
+        "README.md"
     ],
     "keywords": [
         "agent-skills",
