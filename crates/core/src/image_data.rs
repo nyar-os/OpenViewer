@@ -407,10 +407,20 @@ mod tests {
         dir
     }
 
+    fn sample_pixels(width: u32, height: u32, channels: u32) -> Vec<u8> {
+        (0..width * height * channels).map(|index| (index % 251) as u8).collect()
+    }
+
     fn write_png(path: &Path, width: u32, height: u32) {
-        let pixels: Vec<u8> = (0..width * height * 4).map(|index| (index % 251) as u8).collect();
+        let pixels = sample_pixels(width, height, 4);
         let file = File::create(path).unwrap();
         image::codecs::png::PngEncoder::new(file).write_image(&pixels, width, height, ExtendedColorType::Rgba8).unwrap();
+    }
+
+    fn write_jpeg(path: &Path, width: u32, height: u32) {
+        let pixels = sample_pixels(width, height, 3);
+        let file = File::create(path).unwrap();
+        image::codecs::jpeg::JpegEncoder::new(file).write_image(&pixels, width, height, ExtendedColorType::Rgb8).unwrap();
     }
 
     #[test]
@@ -437,7 +447,29 @@ mod tests {
         let decoded = decode(&path).unwrap();
         assert_eq!(decoded.width, 3);
         assert_eq!(decoded.height, 2);
-        assert_eq!(decoded.rgba.len(), 3 * 2 * 4);
+        assert_eq!(decoded.rgba, sample_pixels(3, 2, 4), "alpha survives the portable decoder");
+    }
+
+    #[test]
+    fn jpeg_decodes_through_the_portable_decoder() {
+        let dir = temp_dir();
+        let path = dir.join("sample.jpg");
+        write_jpeg(&path, 6, 4);
+        let decoded = decode(&path).unwrap();
+        assert_eq!((decoded.width, decoded.height), (6, 4));
+        assert_eq!(decoded.rgba.len(), 6 * 4 * 4);
+        assert!(decoded.rgba.chunks_exact(4).all(|pixel| pixel[3] == 255), "JPEG carries no alpha channel");
+    }
+
+    #[test]
+    fn corrupt_png_fails_through_the_portable_decoder() {
+        let dir = temp_dir();
+        let path = dir.join("broken.png");
+        let mut bytes = PNG_SIGNATURE.to_vec();
+        bytes.extend_from_slice(b"not a real png");
+        fs::write(&path, bytes).unwrap();
+        let error = decode(&path).unwrap_err();
+        assert_eq!(error.code(), crate::codes::DECODE_ERROR);
     }
 
     #[test]

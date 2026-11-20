@@ -30,7 +30,7 @@ gif = "0.14"
 base64 = "0.22"
 # Cross-repo git dependencies must pin the full 40-character revision.
 wae = { git = "https://github.com/doki-land/wae-framework.git", rev = "66f5d003fec85e28503968fd0a6a271beef0f389" }
-media-image = { git = "https://github.com/oovm/rust-boost", rev = "a3aea61964759f8b6ac387a7d1e1c440e0ba4337" }
+media-image = { git = "https://github.com/oovm/boost.rs.git", rev = "b8c14c559c87d9531d00819892ce1bcf7ee447d4" }
 open-viewer-core = { path = "crates/core" }
 
 [profile.release]
