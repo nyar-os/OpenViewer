@@ -26,7 +26,7 @@
         "gui": "pnpm run build && pnpm --filter @wae/open-viewer exec node ./dist/cli.js gui"
     },
     "devDependencies": {
-        "@doki-land/nifty": "^0.1.10",
+        "@doki-land/nifty": "^0.1.17",
         "@wae/wae": "0.0.6",
         "@types/node": "^22.20.4",
         "typescript": "^5.9.2"
